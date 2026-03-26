@@ -279,6 +279,24 @@
             transform: scale(0.98);
         }
 
+        .copy-btn.blocked {
+            background: rgba(198, 40, 40, 0.6);
+            border: 1px solid rgba(198, 40, 40, 0.8);
+            cursor: not-allowed;
+            opacity: 0.9;
+            letter-spacing: 2px;
+        }
+
+        .copy-btn.blocked:hover {
+            background: rgba(198, 40, 40, 0.6);
+            transform: none;
+        }
+
+        .dark-mode .copy-btn.blocked {
+            background: rgba(198, 40, 40, 0.4);
+            border: 1px solid rgba(198, 40, 40, 0.6);
+        }
+
         .results-area {
             display: flex;
             flex-direction: column;
@@ -409,21 +427,12 @@
         .footer-logo {
             max-height: 14px;
             /* Super pequeno, equivalente a ~letrinhas de rodapé~ */
-            opacity: 0.6;
+            opacity: 0.8;
             transition: all 0.3s;
-            filter: grayscale(100%);
         }
 
         .footer-logo:hover {
-            filter: none;
             opacity: 1;
-        }
-
-        .dark-mode .footer-logo {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 4px 8px;
-            border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
         #loading-spinner {
@@ -713,6 +722,7 @@
                     t: item['ID TBSA'] || '',
                     l: item['ID CLARO'] || '',
                     f: item['FIM ACESSO'] || '',
+                    s: item['STATUS'] || '',
                     o: item['OBSERVAÇÕES'] || ''
                 }));
 
@@ -822,6 +832,10 @@
             card.className = 'glass card';
             const isOverdue = checkIfOverdue(item.f);
             const dateDisplay = formatDisplayDate(item.f);
+            const status = (item.s || '').trim().toLowerCase();
+            const isApproved = status === 'aprovado' || status === '';
+            const isBlocked = isOverdue || !isApproved;
+            const blockLabel = !isApproved ? `🚫 ${escapeHTML(item.s).toUpperCase()}` : '🚫 REPROVADO';
 
             card.innerHTML = `
                 <div class="card-header">
@@ -829,14 +843,17 @@
                         <div class="ticket-id">CHAMADO #${escapeHTML(item.c)}</div>
                         <div class="main-id">${escapeHTML(item.t)}<br><span style="font-size: 16px; font-weight: 600; opacity: 0.8;">${escapeHTML(item.l)}</span></div>
                     </div>
-                    <div class="badge ${isOverdue ? 'badge-overdue' : 'badge-valid'}">
+                    <div class="badge ${isBlocked ? 'badge-overdue' : 'badge-valid'}">
                         ${escapeHTML(dateDisplay)}
                     </div>
                 </div>
                 ${item.o ? `<div class="obs">${escapeHTML(item.o)}</div>` : ''}
-                <button class="copy-btn" data-chamado="${escapeHTML(item.c)}" data-tbsa="${escapeHTML(item.t)}" data-claro="${escapeHTML(item.l)}" data-validade="${escapeHTML(dateDisplay)}" data-obs="${escapeHTML(item.o || '')}">
+                ${isBlocked
+                    ? `<button class="copy-btn blocked" disabled>${blockLabel}</button>`
+                    : `<button class="copy-btn" data-chamado="${escapeHTML(item.c)}" data-tbsa="${escapeHTML(item.t)}" data-claro="${escapeHTML(item.l)}" data-validade="${escapeHTML(dateDisplay)}" data-obs="${escapeHTML(item.o || '')}">
                     COPIAR
-                </button>
+                </button>`
+                }
             `;
             return card;
         }
@@ -895,10 +912,14 @@
         btn.addEventListener('click', handleSearch);
         window.addEventListener('load', fetchData);
 
-        // PWA Service Worker
+        // PWA Service Worker — Force update
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(err => {
-                console.warn('SW registration failed:', err);
+            // Limpar caches antigos e forçar atualização
+            caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(r => r.unregister());
+                // Re-registrar SW atualizado
+                setTimeout(() => navigator.serviceWorker.register('sw.js'), 500);
             });
         }
     </script>
