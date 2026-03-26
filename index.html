@@ -3,9 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Consulta de Sites - EQS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Outfit:wght@500;700;800&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-dark: #640b0b;
@@ -44,42 +47,32 @@
         }
 
         body {
-            background: radial-gradient(circle at 30% 20%, var(--bg-light) 0%, var(--bg-dark) 100%);
+            background: url('fundo.png') no-repeat center center fixed;
+            background-size: cover;
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             padding-bottom: 30px;
-            transition: background 0.4s ease;
             position: relative;
             overflow-x: hidden;
         }
 
-        /* Elementos flutuantes decorativos para enriquecer o fundo */
-        body::before,
-        body::after {
-            content: '';
-            position: absolute;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #ff4d4d, #990000);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            z-index: -1;
-        }
-
+        /* Overlay para garantir a legibilidade do texto e aplicar o Dark Mode */
         body::before {
-            width: 150px;
-            height: 150px;
-            top: 10%;
-            left: 5%;
-            filter: blur(2px);
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.2);
+            z-index: -1;
+            transition: background 0.4s ease;
         }
 
-        body::after {
-            width: 250px;
-            height: 250px;
-            bottom: 20%;
-            right: -5%;
-            filter: blur(4px);
+        .dark-mode body::before {
+            background: rgba(0, 0, 0, 0.7);
         }
 
         /* Glassmorphism Classes */
@@ -90,7 +83,8 @@
             border: 1px solid var(--glass-border);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
-            transform: translateZ(0); /* Força aceleração de hardware no mobile */
+            transform: translateZ(0);
+            /* Força aceleração de hardware no mobile */
         }
 
         .main-container {
@@ -108,83 +102,118 @@
             padding-top: 40px;
         }
 
+        .hero-glass {
+            background: rgba(255, 255, 255, 0.1);
+            /* Liquid glass effect */
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 28px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            padding: 30px 20px;
+            max-width: 540px;
+            width: calc(100% - 32px);
+            margin: 0 auto 20px;
+        }
+
+        .dark-mode .hero-glass {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
         header {
             text-align: center;
-            padding: 40px 20px 20px;
-            margin-bottom: 10px;
+            margin-bottom: 25px;
             position: relative;
         }
 
         h1 {
-            font-size: 24px;
-            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            font-size: 28px;
+            font-weight: 800;
             color: var(--text-main);
-            letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            text-transform: uppercase;
+            letter-spacing: -0.5px;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
         }
 
-        /* Dark Mode Toggle */
-        #theme-toggle {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 70px;
-            height: 70px;
-            border: none;
-            background: transparent;
-            cursor: pointer;
+        /* Liquid Glass Toggle */
+        .toggle-wrap {
+            position: fixed;
+            top: 16px;
+            right: 16px;
             z-index: 200;
-            padding: 0;
-            outline: none;
+        }
+
+        #theme-check {
+            display: none;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            width: 56px;
+            height: 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            position: relative;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+            transition: all 0.4s ease;
             -webkit-tap-highlight-color: transparent;
         }
 
-        #theme-toggle img {
+        .toggle-label:active {
+            transform: scale(0.93);
+        }
+
+        .toggle-knob {
             position: absolute;
-            top: 5%;
-            left: 5%;
-            width: 90%;
-            height: 90%;
-            object-fit: contain;
-            object-position: center center;
-            border-radius: 0;
-            box-shadow: none;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.4s cubic-bezier(0.68, -0.15, 0.27, 1.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            line-height: 1;
         }
 
-        /* Tema Claro */
-        body:not(.dark-mode) #icon-light {
-            opacity: 1;
-            transform: scale(1) rotate(0deg);
+        .toggle-knob::after {
+            content: '☀️';
+            font-size: 13px;
         }
 
-        body:not(.dark-mode) #icon-dark {
-            opacity: 0;
-            transform: scale(0.3) rotate(-90deg);
-            pointer-events: none;
+        .dark-mode .toggle-label {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        /* Tema Escuro */
-        .dark-mode #icon-light {
-            opacity: 0;
-            transform: scale(0.3) rotate(90deg);
-            pointer-events: none;
+        .dark-mode .toggle-knob {
+            transform: translateX(26px);
+            background: rgba(30, 30, 40, 0.95);
         }
 
-        .dark-mode #icon-dark {
-            opacity: 1;
-            transform: scale(1) rotate(0deg);
-        }
-
-        #theme-toggle:active {
-            transform: scale(0.9);
+        .dark-mode .toggle-knob::after {
+            content: '🌙';
         }
 
         .search-section {
-            padding: 0 16px;
-            max-width: 500px;
-            margin: 0 auto 20px;
+            width: 100%;
         }
 
         .search-box {
@@ -421,25 +450,29 @@
 </head>
 
 <body>
-    <button id="theme-toggle" aria-label="Alterar Tema">
-        <img id="icon-light" src="icon_light.png" alt="Light Mode">
-        <img id="icon-dark" src="icon_dark.png" alt="Dark Mode">
-    </button>
+    <div class="toggle-wrap">
+        <input type="checkbox" id="theme-check">
+        <label for="theme-check" class="toggle-label" aria-label="Alterar Tema">
+            <span class="toggle-knob"></span>
+        </label>
+    </div>
 
     <main class="main-container" id="main-container">
-        <header>
-            <h1>Consulta de Chamados TBSA</h1>
-        </header>
+        <div class="hero-glass">
+            <header>
+                <h1>Consulta de Chamados TBSA</h1>
+            </header>
 
-        <div class="search-section">
-            <div class="glass search-box">
-                <input type="text" id="search-input" placeholder="Estação, Detentora ou Chamado...">
-                <button id="search-btn">Consultar Chamado</button>
-                <div id="status-sync"></div>
+            <div class="search-section">
+                <div class="glass search-box">
+                    <input type="text" id="search-input" placeholder="Estação, id detentora ou chamado...">
+                    <button id="search-btn">Consultar Chamado</button>
+                    <div id="status-sync"></div>
+                </div>
+                <div id="status-search" style="margin-top: 15px; text-align: center;"></div>
+                <div id="loading-spinner"></div>
+                <div id="loading-text" class="saving-text">Consultando base de dados...</div>
             </div>
-            <div id="status-search" style="margin-top: 15px; text-align: center;"></div>
-            <div id="loading-spinner"></div>
-            <div id="loading-text" class="saving-text">Consultando base de dados...</div>
         </div>
 
         <div class="results-area" id="results-list">
@@ -661,17 +694,17 @@
             } catch (e) { return dateStr; }
         }
 
-        // Tema Noturno
-        const themeBtn = document.getElementById('theme-toggle');
-        themeBtn.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            const isDark = document.body.classList.contains('dark-mode');
-            localStorage.setItem('eqs-theme', isDark ? 'dark' : 'light');
+        // Tema Noturno — Liquid Glass Toggle
+        const themeCheck = document.getElementById('theme-check');
+        themeCheck.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', themeCheck.checked);
+            localStorage.setItem('eqs-theme', themeCheck.checked ? 'dark' : 'light');
         });
 
         // Recuperar preferência
         if (localStorage.getItem('eqs-theme') === 'dark') {
             document.body.classList.add('dark-mode');
+            themeCheck.checked = true;
         }
 
         // Enter para buscar
