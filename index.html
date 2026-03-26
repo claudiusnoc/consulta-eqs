@@ -6,13 +6,14 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Consulta de Sites - EQS</title>
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo-eqs.png">
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Outfit:wght@500;700;800&display=swap"
         rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #640b0b;
-            --bg-light: #c21a1a;
             --card-glass: rgba(255, 255, 255, 0.1);
             --text-main: #FFFFFF;
             --text-secondary: rgba(255, 255, 255, 0.7);
@@ -24,8 +25,6 @@
         }
 
         .dark-mode {
-            --bg-dark: #2a0404;
-            --bg-light: #5c0b0b;
             --card-glass: rgba(0, 0, 0, 0.2);
             --input-bg: rgba(0, 0, 0, 0.4);
             --glass-border: rgba(255, 255, 255, 0.1);
@@ -431,8 +430,8 @@
             margin: 20px auto;
             width: 30px;
             height: 30px;
-            border: 3px solid rgba(3, 112, 243, 0.2);
-            border-top: 3px solid var(--primary-color);
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top: 3px solid rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -445,6 +444,103 @@
             100% {
                 transform: rotate(360deg);
             }
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 14px 24px;
+            color: var(--text-main);
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .dark-mode .toast {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Card Animation */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-animate {
+            animation: fadeInUp 0.4s ease forwards;
+            opacity: 0;
+        }
+
+        /* Results Counter */
+        .results-count {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Dark-mode aware status messages */
+        .status-error {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 14px;
+            line-height: 1.4;
+            border: 1px solid #ffcdd2;
+        }
+
+        .dark-mode .status-error {
+            color: #ef9a9a;
+            background: rgba(198, 40, 40, 0.3);
+            border: 1px solid rgba(198, 40, 40, 0.5);
+        }
+
+        .status-sync-ok {
+            color: #2e7d32;
+        }
+
+        .dark-mode .status-sync-ok {
+            color: #81c784;
+        }
+
+        .status-sync-fail {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 10px;
+            text-align: left;
+            line-height: 1.4;
+        }
+
+        .dark-mode .status-sync-fail {
+            color: #ef9a9a;
+            background: rgba(198, 40, 40, 0.3);
+            border: 1px solid rgba(198, 40, 40, 0.5);
         }
     </style>
 </head>
@@ -486,6 +582,8 @@
 
     <script>
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSd38yd9rKqhhtcr-np09wmsa2VsS2wV4cQqPjqQbzV7bUhZJTWwrXqO-4aPAHK9g/pub?output=csv';
+        const CACHE_KEY = 'eqs-data-cache';
+        const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
         // Dados de Fallback (Offline) - Extraídos do CSV original para garantir funcionamento local
         const OFFLINE_DATA = [
             { "c": "00358519", "t": "TEMGBHO0027", "l": "EMG0010", "f": "2026-05-31", "o": "Carta encaminhada ao local. Problemas de acesso, acionar o NOC TBSA." },
@@ -517,7 +615,44 @@
 
         let dataStore = [];
 
-        // Elementos UI
+        // === Utilitários ===
+        function escapeHTML(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function debounce(fn, delay) {
+            let timer;
+            return function (...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
+        function showToast(message, duration = 2500) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), duration);
+        }
+
+        // === Cache Local ===
+        function getCachedData() {
+            try {
+                const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data;
+            } catch (e) { }
+            return null;
+        }
+
+        function setCachedData(data) {
+            try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+            } catch (e) { console.warn('Cache write failed:', e); }
+        }
+
         const input = document.getElementById('search-input');
         const btn = document.getElementById('search-btn');
         const resultsList = document.getElementById('results-list');
@@ -525,30 +660,42 @@
         const statusSearch = document.getElementById('status-search');
         const spinner = document.getElementById('loading-spinner');
 
-        // Inicialização: Fetch dos dados com timeout
+        // === Fetch de Dados ===
         async function fetchData() {
+            const loadingText = document.getElementById('loading-text');
+            const cached = getCachedData();
+            if (cached) {
+                dataStore = cached;
+                statusSync.innerHTML = '<span class="status-sync-ok">● Dados carregados do cache</span>';
+                fetchRemoteData(true);
+                return;
+            }
+            spinner.style.display = 'block';
+            loadingText.style.display = 'block';
+            statusSync.innerHTML = '';
+            await fetchRemoteData(false);
+        }
+
+        async function fetchRemoteData(silent) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
             const loadingText = document.getElementById('loading-text');
 
             try {
-                spinner.style.display = 'block';
-                loadingText.style.display = 'block';
-                statusSync.innerHTML = '';
-
                 let response;
-
                 try {
-                    // Tentativa 1: Direto (funciona em servidores ou se o CORS permitir)
                     response = await fetch(CSV_URL, { signal: controller.signal });
                 } catch (e) {
-                    // Tentativa 2: Via Proxy CORS (para quando o arquivo é aberto localmente via file://)
-                    console.warn('Tentando via Proxy CORS...');
-                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(CSV_URL)}`;
-                    response = await fetch(proxyUrl);
+                    console.warn('Tentando via corsproxy.io...');
+                    try {
+                        response = await fetch(`https://corsproxy.io/?${encodeURIComponent(CSV_URL)}`, { signal: controller.signal });
+                    } catch (e2) {
+                        console.warn('Tentando via allorigins...');
+                        response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(CSV_URL)}`);
+                    }
                 }
 
-                if (!response || !response.ok) throw new Error('Falha completa no download');
+                if (!response || !response.ok) throw new Error('Falha no download');
 
                 const text = await response.text();
                 const remoteData = parseCSV(text);
@@ -561,22 +708,26 @@
                     o: item['OBSERVAÇÕES'] || ''
                 }));
 
-                statusSync.innerHTML = '<span style="color: #2e7d32;">● Conectado à Planilha chamados tbsa (Sincronizado)</span>';
-                spinner.style.display = 'none';
-                loadingText.style.display = 'none';
+                setCachedData(dataStore);
+                statusSync.innerHTML = '<span class="status-sync-ok">● Conectado à Planilha (Sincronizado)</span>';
                 clearTimeout(timeoutId);
             } catch (error) {
                 clearTimeout(timeoutId);
-                dataStore = OFFLINE_DATA;
-                statusSync.innerHTML = `
-                    <div style="color: #d32f2f; background: #ffebee; padding: 10px; border-radius: 8px; font-size: 13px; margin-top: 10px; text-align: left; line-height: 1.4;">
-                        <strong>Sincronização Indisponível</strong><br>
-                        O navegador bloqueou o acesso à planilha e o servidor de backup falhou. <br>
-                        <small>Exibindo apenas 25 sites de backup offline.</small>
-                    </div>
-                `;
-                spinner.style.display = 'none';
-                loadingText.style.display = 'none';
+                if (!silent) {
+                    dataStore = OFFLINE_DATA;
+                    statusSync.innerHTML = `
+                        <div class="status-sync-fail">
+                            <strong>Sincronização Indisponível</strong><br>
+                            Os servidores de proxy falharam.<br>
+                            <small>Exibindo 25 sites de backup offline.</small>
+                        </div>
+                    `;
+                }
+            } finally {
+                if (!silent) {
+                    spinner.style.display = 'none';
+                    loadingText.style.display = 'none';
+                }
             }
         }
 
@@ -634,7 +785,7 @@
 
             if (filtered.length === 0) {
                 statusSearch.innerHTML = `
-                    <div style="color: #d32f2f; background: #ffebee; padding: 15px; border-radius: 12px; font-weight: 500; font-size: 14px; line-height: 1.4; border: 1px solid #ffcdd2;">
+                    <div class="status-error">
                         Caso não encontre pelo site, busque pelo id da detentora ou solicite seu supervisor abertura do chamado..
                     </div>
                 `;
@@ -642,7 +793,19 @@
             }
 
             statusSearch.textContent = '';
-            filtered.forEach(item => resultsList.appendChild(createCard(item)));
+
+            // Contador de resultados
+            const counter = document.createElement('div');
+            counter.className = 'results-count';
+            counter.textContent = `${filtered.length} resultado${filtered.length > 1 ? 's' : ''} encontrado${filtered.length > 1 ? 's' : ''}`;
+            resultsList.appendChild(counter);
+
+            filtered.forEach((item, index) => {
+                const card = createCard(item);
+                card.classList.add('card-animate');
+                card.style.animationDelay = `${index * 0.08}s`;
+                resultsList.appendChild(card);
+            });
         }
 
 
@@ -655,29 +818,34 @@
             card.innerHTML = `
                 <div class="card-header">
                     <div class="card-titles">
-                        <div class="ticket-id">CHAMADO #${item.c}</div>
-                        <div class="main-id">${item.t}<br><span style="font-size: 16px; font-weight: 600; opacity: 0.8;">${item.l}</span></div>
+                        <div class="ticket-id">CHAMADO #${escapeHTML(item.c)}</div>
+                        <div class="main-id">${escapeHTML(item.t)}<br><span style="font-size: 16px; font-weight: 600; opacity: 0.8;">${escapeHTML(item.l)}</span></div>
                     </div>
                     <div class="badge ${isOverdue ? 'badge-overdue' : 'badge-valid'}">
-                        ${dateDisplay}
+                        ${escapeHTML(dateDisplay)}
                     </div>
                 </div>
-                ${item.o ? `<div class="obs">${item.o}</div>` : ''}
-                <button class="copy-btn" onclick="copyCardData('${item.c}', '${item.t}', '${item.l}', '${dateDisplay}', '${item.o}')">
+                ${item.o ? `<div class="obs">${escapeHTML(item.o)}</div>` : ''}
+                <button class="copy-btn" data-chamado="${escapeHTML(item.c)}" data-tbsa="${escapeHTML(item.t)}" data-claro="${escapeHTML(item.l)}" data-validade="${escapeHTML(dateDisplay)}" data-obs="${escapeHTML(item.o || '')}">
                     COPIAR
                 </button>
             `;
             return card;
         }
 
-        window.copyCardData = function (chamado, tbsa, claro, validade, obs) {
+        // Event delegation para copiar (resolve problema de aspas)
+        document.addEventListener('click', function (e) {
+            const copyBtn = e.target.closest('.copy-btn');
+            if (!copyBtn) return;
+            const { chamado, tbsa, claro, validade, obs } = copyBtn.dataset;
             const textToCopy = `CHAMADO #${chamado} | Site: ${tbsa} | Estação: ${claro} | VÁLIDO ATÉ ${validade} | OBS: ${obs || 'Sem observações.'}`;
             navigator.clipboard.writeText(textToCopy).then(() => {
-                alert('Dados copiados: ' + textToCopy);
+                showToast('✓ Dados copiados com sucesso!');
             }).catch(err => {
                 console.error('Erro ao copiar:', err);
+                showToast('Erro ao copiar dados.');
             });
-        };
+        });
 
         function checkIfOverdue(dateStr) {
             if (!dateStr) return false;
@@ -707,14 +875,26 @@
             themeCheck.checked = true;
         }
 
-        // Enter para buscar
+        // Busca em tempo real com debounce
+        const debouncedSearch = debounce(handleSearch, 300);
+        input.addEventListener('input', debouncedSearch);
+
+        // Enter e botão para buscar
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleSearch();
         });
 
         btn.addEventListener('click', handleSearch);
         window.addEventListener('load', fetchData);
+
+        // PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => {
+                console.warn('SW registration failed:', err);
+            });
+        }
     </script>
+    <div id="toast" class="toast"></div>
 </body>
 
 </html>
