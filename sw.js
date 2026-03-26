@@ -1,7 +1,9 @@
-const CACHE_NAME = 'eqs-consulta-v2';
+const CACHE_NAME = 'eqs-consulta-v3';
 const ASSETS = [
     './',
     './index.html',
+    './index.css',
+    './app.js',
     './fundo.png',
     './logo-eqs.png',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Outfit:wght@500;700;800&display=swap'
